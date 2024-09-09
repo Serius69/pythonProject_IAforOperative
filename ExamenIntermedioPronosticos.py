@@ -1,31 +1,53 @@
 import pandas as pd
 import numpy as np
+import os
 
-# Leer datos del archivo Excel
-# Asegúrate de reemplazar 'ruta_del_archivo.xlsx' con la ruta real de tu archivo Excel
-df = pd.read_excel('ruta_del_archivo.xlsx')
+# Ruta del archivo Excel
+excel_file = 'demanda.xlsx'  # Asegúrate de reemplazar esto con la ruta correcta
 
-# Verificar que las columnas necesarias existen
-required_columns = ['Mes', '2018', '2019', '2021', '2022']
-if not all(column in df.columns for column in required_columns):
-    raise ValueError("El archivo Excel no contiene todas las columnas necesarias")
+# Verificar si el archivo existe
+if not os.path.exists(excel_file):
+    raise FileNotFoundError(f"El archivo '{excel_file}' no existe. Por favor, verifica la ruta.")
 
-# Promedio móvil simple (4 años: 2018, 2019, 2021, 2022)
-df['Promedio_Movil_Simple'] = df[['2018', '2019', '2021', '2022']].mean(axis=1)
+try:
+    # Leer datos del archivo Excel
+    df = pd.read_excel(excel_file)
 
-# Promedio móvil ponderado (usamos ponderaciones: 0.1 para 2018, 0.2 para 2019, 0.3 para 2021 y 0.4 para 2022)
-weights = [0.1, 0.2, 0.3, 0.4]
-df['Promedio_Movil_Ponderado'] = df[['2018', '2019', '2021', '2022']].dot(weights)
+    print("Columnas en el archivo Excel:")
+    print(df.columns.tolist())
 
-# Suavizamiento exponencial simple (alpha = 0.3)
-alpha = 0.3
-df['Suavizamiento_Exponencial'] = df['2022'].ewm(alpha=alpha, adjust=False).mean()
+    # Convertir los nombres de las columnas a strings
+    df.columns = df.columns.astype(str)
 
-# Mostrar resultados
-print(df[['Mes', 'Promedio_Movil_Simple', 'Promedio_Movil_Ponderado', 'Suavizamiento_Exponencial']])
+    # Verificar que las columnas necesarias existen
+    required_columns = ['Mes', '2018', '2019', '2021', '2022']
+    missing_columns = [col for col in required_columns if col not in df.columns]
 
-# Guardar resultados en un nuevo archivo Excel
-# Asegúrate de reemplazar 'resultados_pronostico.xlsx' con el nombre que desees para tu archivo de salida
-df.to_excel('resultados_pronostico.xlsx', index=False)
+    if missing_columns:
+        raise ValueError(
+            f"El archivo Excel no contiene las siguientes columnas necesarias: {', '.join(missing_columns)}")
 
-print("Los resultados han sido guardados en 'resultados_pronostico.xlsx'")
+    # Promedio móvil simple (4 años: 2018, 2019, 2021, 2022)
+    df['Promedio_Movil_Simple'] = df[['2018', '2019', '2021', '2022']].mean(axis=1)
+
+    # Promedio móvil ponderado (usamos ponderaciones: 0.1 para 2018, 0.2 para 2019, 0.3 para 2021 y 0.4 para 2022)
+    weights = [0.1, 0.2, 0.3, 0.4]
+    df['Promedio_Movil_Ponderado'] = df[['2018', '2019', '2021', '2022']].dot(weights)
+
+    # Suavizamiento exponencial simple (alpha = 0.3)
+    alpha = 0.3
+    df['Suavizamiento_Exponencial'] = df['2022'].ewm(alpha=alpha, adjust=False).mean()
+
+    # Mostrar resultados
+    print("\nResultados:")
+    print(df[['Mes', 'Promedio_Movil_Simple', 'Promedio_Movil_Ponderado', 'Suavizamiento_Exponencial']])
+
+    # Guardar resultados en un nuevo archivo Excel
+    output_file = 'resultados_pronostico.xlsx'
+    df.to_excel(output_file, index=False)
+    print(f"\nLos resultados han sido guardados en '{output_file}'")
+
+except pd.errors.EmptyDataError:
+    print(f"El archivo '{excel_file}' está vacío. Por favor, asegúrate de que contiene datos.")
+except Exception as e:
+    print(f"Ocurrió un error al procesar el archivo: {str(e)}")
